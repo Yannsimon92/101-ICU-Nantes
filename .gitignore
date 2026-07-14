@@ -33,3 +33,15 @@ desktop.ini
 
 # --- Claude Code (config locale uniquement ; settings.json partagé si besoin) ---
 .claude/settings.local.json
+
+# --- OpenCode (secrets / config locale ; opencode.json.example reste versionné) ---
+auth.json
+opencode.json
+.opencode/
+*.env
+.env
+.env.*
+*api_key*
+*apikey*
+*.pem
+*.key
