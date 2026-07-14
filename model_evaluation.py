@@ -249,9 +249,10 @@ def main():
     train, val, test = split_train_val_test(df, args.val_size, args.test_size)
     print(f"Split spatial GroupShuffleSplit : train={len(train):,} / "
           f"val={len(val):,} / test={len(test):,} "
-          f"(blocs test gelés -> data/split/)")
-    os.makedirs("data/split", exist_ok=True)
-    with open("data/split/blocs_split.json", "w", encoding="utf-8") as f:
+          f"(blocs test gelés -> {args.out_dir}/split/)")
+    split_dir = os.path.join(args.out_dir, "split")
+    os.makedirs(split_dir, exist_ok=True)
+    with open(os.path.join(split_dir, "blocs_split.json"), "w", encoding="utf-8") as f:
         json.dump({
             "test_blocs": sorted(test["bloc_id"].unique().tolist()),
             "val_blocs": sorted(val["bloc_id"].unique().tolist()),
@@ -293,7 +294,7 @@ def main():
         gbm_metrics.loc["global", "rmse"],
         gbm_metrics.loc["global", "mae"],
         gbm_metrics.loc["global", "r2"],
-        gbm.best_iteration_ or gbm.n_estimators))
+        gbm.best_iteration_ if gbm.best_iteration_ is not None else gbm.n_estimators))
 
     # --- 3. Tableau comparatif + métriques stratifiées -------------------
     summary = pd.DataFrame({
@@ -318,7 +319,7 @@ def main():
         "lightgbm": {"rmse_global": float(gbm_metrics.loc["global", "rmse"]),
                      "mae_global": float(gbm_metrics.loc["global", "mae"]),
                      "r2_global": float(gbm_metrics.loc["global", "r2"]),
-                     "best_iteration": int(gbm.best_iteration_ or -1),
+                     "best_iteration": int(gbm.best_iteration_) if gbm.best_iteration_ is not None else -1,
                      "n_estimators": int(gbm.n_estimators),
                      "params": lgb_params,
                      "feature_importance_split": gbm.feature_importances_.tolist()},

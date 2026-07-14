@@ -76,4 +76,4 @@ def test_model_evaluation_main_end_to_end(synthetic_zone, tmp_path):
     assert "linear" in m and "lightgbm" in m and "shap" in m
     assert "metrics_rmse_stratif" in m
     # Le split gelé a été écrit
-    assert os.path.exists("data/split/blocs_split.json")
+    assert (eval_dir / "split" / "blocs_split.json").exists()
