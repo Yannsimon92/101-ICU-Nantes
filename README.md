@@ -24,6 +24,74 @@ morphologiques Open Data de Nantes Métropole (canopée, bâti) pour produire :
 > prototype et l'analyse critique sont conservés dans
 > [`extension/`](extension/) — matière d'entretien, pas livrable.
 
+## Landsat & Sentinel-2 : deux satellites, deux rôles
+
+Le projet combine deux missions d'observation de la Terre, chacune apportant
+ce que l'autre n'a pas :
+
+| | **Landsat 8/9** (NASA/USGS) | **Sentinel-2** (ESA/Copernicus) |
+|---|---|---|
+| Rôle dans le pipeline | **Cible (Y)** : température de surface | **Features (X)** : indices optiques |
+| Produit GEE utilisé | `LANDSAT/LC08\|LC09/C02/T1_L2` (Collection 2, niveau 2) | `COPERNICUS/S2_SR_HARMONIZED` (réflectance de surface) |
+| Capteur clé | Thermique infrarouge (bande `ST_B10`) | Optique multispectral (visible, proche infrarouge, SWIR) |
+| Résolution native | 100 m (thermique) | 10 m (bandes visibles/NIR), 20 m (SWIR) |
+| Revisite | ~16 j par satellite (~8 j Landsat 8+9 combinés) | ~5 j (2 satellites Sentinel-2A/B/C) |
+| Pourquoi indispensable | Seul satellite du duo à mesurer une **température** — impossible de calculer un ICU sans lui | Résolution fine + bandes dédiées à la végétation/eau/bâti — Landsat seul n'a pas d'équivalent aussi précis pour ces indices |
+
+**Landsat 8/9** fournit la bande `Y_lst_100m_*.tif` : `to_lst()` dans
+`gee_extraction.py` convertit la bande thermique brute `ST_B10` en °C avec les
+facteurs officiels Collection 2, masquée des nuages/ombres via le bit-mask
+`QA_PIXEL`. Résolution native 100 m — c'est elle qui fixe la résolution de
+tout le pipeline (inutile de sur-résoudre le reste à une échelle que la
+température ne peut pas atteindre).
+
+**Sentinel-2** fournit la bande `X_s2_100m_*.tif` : composite médian sur une
+fenêtre de ±5 jours autour de chaque date Landsat (masqué nuages/cirrus via la
+bande `SCL`), puis `build_x_stack_100m()` calcule NDVI (végétation), NDWI
+(eau) et NDBI (bâti, optionnel) à partir des bandes brutes 10 m, avant de les
+agréger à 100 m par moyenne (`reduceResolution`) pour les aligner sur la
+grille Landsat.
+
+Sans cette combinaison, on aurait soit une température sans explication
+(Landsat seul), soit une cartographie fine de la végétation/du bâti sans
+lien avec la chaleur réelle (Sentinel-2 seul). C'est la mise en correspondance
+des deux, pixel par pixel sur la même grille 100 m, qui permet la régression
+et l'analyse SHAP.
+
+## Cadrage Machine Learning : X (features) et y (target)
+
+Une fois les deux satellites alignés sur la même grille 100 m, `build_table.py`
+transforme les rasters en une table tabulaire classique — **1 ligne = 1 pixel
+× 1 date** — avec un `X` et un `y` au sens scikit-learn :
+
+- **y (cible)** : `delta_lst_c`, l'**anomalie spatiale** ΔLST = LST − médiane
+  spatiale de la scène — pas la LST brute. Ce choix élimine l'effet de la
+  météo du jour (une canicule qui touche toute la ville ne doit pas être
+  confondue avec un ICU) et isole la structure thermique propre à chaque
+  pixel, comparée au reste de la métropole ce jour-là.
+- **X (features)**, définies dans `model_evaluation.py`
+  (`FEATURES = ["ndvi", "ndwi", "ndbi", "canopee", "bati"]`) :
+  - `ndvi`, `ndwi`, `ndbi` — indices Sentinel-2 (végétation, eau, bâti),
+    recalculés à chaque date.
+  - `canopee`, `bati` — couches morphologiques statiques Open Data Nantes
+    Métropole (fraction de canopée / bâti par cellule 100 m), identiques à
+    toutes les dates : elles capturent la structure urbaine plutôt que la
+    météo du jour.
+
+Deux modèles sont entraînés sur ce couple `X → y` (voir `model_evaluation.py`) :
+
+1. **Régression linéaire** — baseline interprétable : chaque coefficient se
+   lit directement en « °C par unité de feature » (ex. NDVI +0.1 ⇒ ≈ −X °C),
+   toutes choses égales par ailleurs.
+2. **LightGBM** — gradient boosting, capture les non-linéarités et
+   interactions entre features qu'une régression linéaire ne peut pas voir.
+
+Le split train/val/test est **spatial** (`GroupShuffleSplit` sur `bloc_id`,
+blocs de ~2×2 km) plutôt qu'aléatoire pixel par pixel, pour éviter toute fuite
+d'information entre pixels voisins quasi-identiques. Les valeurs **SHAP** du
+modèle LightGBM quantifient ensuite la contribution de chaque feature `X` à
+l'anomalie `y` prédite — c'est le livrable explicatif du projet.
+
 ## Pipeline
 
 ```
