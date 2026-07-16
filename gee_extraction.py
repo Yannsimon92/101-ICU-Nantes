@@ -27,9 +27,15 @@ Hygiène (audit Sci §8 et roadmap J1.1) :
     (qui masque les dates où les nuages sont restés hors de la zone et inverse-
     ment). S2 garde son masque SCL par pixel + filtre scène sur
     CLOUDY_PIXEL_PERCENTAGE en pré-filtre grossier.
-  - **Manifeste JSON par zone** : system:index des scènes Landsat utilisées,
-    bbox snappée, arguments CLI, IDs de tâches d'export, dates — écrit dans
-    `manifests/manifest_<zone>_<AAAAMMJJ-HHMMSS>.json`.
+    - **Manifeste JSON par zone** : system:index des scènes Landsat utilisées,
+      bbox snappée, arguments CLI, IDs de tâches d'export, dates — écrit dans
+      `manifests/manifest_<zone>_<AAAAMMJJ-HHMMSS>.json`.
+    - **Mosaïque temporelle** : pour les dates dont l'AOI est à cheval sur
+      plusieurs scènes/paths Landsat, une mosaïque est construite avec une
+      fenêtre de +/-`mosaic_window_days` (priorité au jour cible) ; la fraction
+      de couverture de l'emprise est vérifiée avant export (`min_aoi_coverage`).
+      Les champs `aoi_coverage_fraction` et `landsat_mosaic_scene_ids` sont
+      ajoutés au manifeste.
 
 Prérequis :
     pip install earthengine-api
@@ -145,6 +151,39 @@ def landsat_lst_clear(region, year_range, month_range,
     coll = coll.map(lambda img: add_cloud_cover_local(img, region))
     coll = coll.filter(ee.Filter.lte("cloud_cover_local", max_cloud_local))
     return coll.map(to_lst)
+
+
+def build_ymosaic(lst_coll, day, window_days, region, cell_m):
+    """Mosaique les scenes LST (deja filtrees nuages par scene) dans une
+    fenetre +/- window_days autour de `day`, triees par proximite au jour
+    cible (mosaic() garde le pixel de la premiere image non masquee de la
+    collection -> les scenes du jour cible sont prioritaires, les scenes
+    voisines ne comblent que les trous de couverture).
+
+    Renvoie (mosaic_image_float32, coverage_fraction, scene_ids_utilises)."""
+    start = day.advance(-window_days, "day")
+    end = day.advance(window_days + 1, "day")
+    window_coll = lst_coll.filterDate(start, end)
+
+    def _add_day_diff(img):
+        diff = ee.Number(img.get("system:time_start")).subtract(
+            day.millis()).abs()
+        return img.set("_day_diff", diff)
+
+    window_coll = window_coll.map(_add_day_diff).sort("_day_diff")
+    mosaic_img = window_coll.mosaic().toFloat()
+
+    coverage = mosaic_img.mask().reduceRegion(
+        reducer=ee.Reducer.mean(),
+        geometry=region,
+        scale=cell_m,
+        maxPixels=MAX_PIXELS_REDUCE,
+        bestEffort=True,
+    ).get("LST")
+    coverage = ee.Number(coverage).getInfo() if coverage is not None else 0.0
+
+    scene_ids = window_coll.aggregate_array("system:index").getInfo() or []
+    return mosaic_img, float(coverage or 0.0), scene_ids
 
 
 # ---------------------------------------------------------------------------
@@ -312,12 +351,20 @@ def extract_zone(zone, bbox, args):
             "files": [],
         }
 
+        y_img, coverage, mosaic_scene_ids = build_ymosaic(
+            lst_coll, day, args.mosaic_window_days, region, cell_m)
+        if coverage < args.min_aoi_coverage:
+            print(f"  [{date_str}] ignorée : couverture emprise "
+                  f"{coverage:.1%} < seuil {args.min_aoi_coverage:.0%} "
+                  f"meme apres mosaique +/-{args.mosaic_window_days} j")
+            continue
+
+        entry["aoi_coverage_fraction"] = round(coverage, 4)
+        entry["landsat_mosaic_scene_ids"] = mosaic_scene_ids
+
         if args.dry_run:
             exports.append(entry)
             continue
-
-        # Moyenne des scènes Landsat du jour (gère le recouvrement de traces).
-        y_img = lst_coll.filterDate(day, day.advance(1, "day")).mean().toFloat()
 
         if cell_m == 10:
             x_img = build_x_stack_10m(s2.median())
@@ -378,6 +425,13 @@ def main():
                     help="CLOUDY_PIXEL_PERCENTAGE max des composites S2 (défaut: 20)")
     ap.add_argument("--s2-window", type=int, default=5,
                     help="fenêtre S2 en jours autour de la date Landsat (défaut: 5)")
+    ap.add_argument("--mosaic-window-days", type=int, default=3,
+                    help="fenetre +/- jours pour chercher des scenes Landsat "
+                         "complementaires afin de combler la couverture de "
+                         "l'emprise (mosaic) (defaut: 3)")
+    ap.add_argument("--min-aoi-coverage", type=float, default=0.98,
+                    help="fraction minimale de l'emprise qui doit avoir des "
+                         "pixels LST valides pour garder une date (defaut: 0.98)")
     ap.add_argument("--with-ndbi", action="store_true",
                     help="(mode 100 m) ajoute le NDBI via le SWIR B11")
     ap.add_argument("--folder", default="ICU_Nantes",
