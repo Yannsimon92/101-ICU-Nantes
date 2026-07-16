@@ -16,6 +16,10 @@ checkpoints/
 *.pth
 predictions/
 outputs/
+manifests/
+
+# --- Notes de travail internes (pas destinees a l'historique git public) ---
+journal_workflow_ia.txt
 
 # --- Artefacts WSL / Windows ---
 *:Zone.Identifier
