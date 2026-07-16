@@ -175,13 +175,18 @@ def build_x_stack_10m(s2_median):
             .toFloat())
 
 
-def build_x_stack_100m(s2_median, with_ndbi):
+def build_x_stack_100m(s2_median, with_ndbi, native_proj):
     """Stack d'indices Sentinel-2 agrégés à 100 m par moyenne par cellule
     (reduceResolution) : NDVI, NDWI (+ NDBI si demandé).
 
     L'agrégation se fait sur le médian 10 m déjà masqué SCL ; on suppose une
     couverture suffisante de pixels clairs dans chaque cellule 100 m (l'écart
-    de couverture S2/Landsat reste < 5 j, biais faible sur les indices)."""
+    de couverture S2/Landsat reste < 5 j, biais faible sur les indices).
+
+    `native_proj` doit être la projection native 10 m de la collection S2
+    AVANT compositing (passée par l'appelant) : le composite `s2.median()` ne
+    porte pas de projection par défaut exploitée par reduceResolution(), d'où
+    l'appel explicite à setDefaultProjection() ci-dessous."""
     ndvi = s2_median.normalizedDifference(["B8", "B4"]).rename("NDVI")
     ndwi = s2_median.normalizedDifference(["B3", "B8"]).rename("NDWI")
     bands = [ndvi, ndwi]
@@ -189,7 +194,7 @@ def build_x_stack_100m(s2_median, with_ndbi):
         ndbi = s2_median.normalizedDifference(["B11", "B8"]).rename("NDBI")
         bands.append(ndbi)
     # reduceResolution() aggrège les pixels 10 m vers 100 m par moyenne.
-    return (ee.Image(bands).reduceResolution(
+    return (ee.Image(bands).setDefaultProjection(native_proj).reduceResolution(
         reducer=ee.Reducer.mean(),
         maxPixels=1024).toFloat())
 
@@ -319,7 +324,8 @@ def extract_zone(zone, bbox, args):
             tag_x = "X_s2"
             resample_x = True
         else:
-            x_img = build_x_stack_100m(s2.median(), args.with_ndbi)
+            x_img = build_x_stack_100m(s2.median(), args.with_ndbi,
+                                       s2.first().select("B4").projection())
             tag_x = "X_s2_100m"
             resample_x = True   # l'optique reste en bilinéaire pour la reprojection
 
