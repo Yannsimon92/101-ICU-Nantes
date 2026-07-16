@@ -16,7 +16,8 @@ sont conservés ici — matière d'entretien, pas livrable.
 | `predict.py` | Inférence fenêtre glissante + fusion de Hann |
 | `prepare_patches.py` | Tuilage 256×256 + fusion canopée/bâti (mode 10 m) |
 | `app_unet.py` | App Streamlit d'origine (prédictions 10 m vs Landsat 100 m) |
-| `02_comprendre_le_modele_UNet.ipynb` | Notebook pédagogique d'architecture U-Net |
+| `01_comprendre_les_donnees_ICU.ipynb` | Notebook pédagogique : paradoxe de résolution 100 m/10 m, indices biophysiques, `Dataset` PyTorch (déplacé ici depuis la racine, spécifique à cette extension) |
+| `02_comprendre_le_modele_UNet.ipynb` | Notebook pédagogique d'architecture U-Net (suite de 01) |
 | `icu_nantes_deep_learning_spec.md` | Spec complète (U-Net orientée) |
 | `audit_coherence.md` | Audit bout-en-bout du pipeline U-Net |
 | `audit_scientifique.md` / `_resume.md` | Audit scientifique (verrous critiques) |

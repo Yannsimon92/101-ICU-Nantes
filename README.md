@@ -202,6 +202,27 @@ classification de tissu, table end-to-end, run complet
 - Validation **in situ** non réalisée (cf. audit scientifique) ; le projet est
   exploratoire et pédagogique, à valider terrain avant communication opérationnelle.
 
+## Notebooks
+
+Notebooks pédagogiques et d'investigation, générés via `nbformat` et
+vérifiés par `jupyter nbconvert --execute` (aucune sortie inventée) :
+
+- [`03_analyse_scientifique_ICU.ipynb`](03_analyse_scientifique_ICU.ipynb) —
+  colinéarité entre features (pourquoi le coefficient NDVI brut est
+  contre-intuitif) : corrélations, VIF, expériences d'isolement.
+- [`04_comprendre_lanalyse_ICU.ipynb`](04_comprendre_lanalyse_ICU.ipynb) —
+  notebook pédagogique de bout en bout, de la résolution satellite à
+  l'app Streamlit (mosaïquage Landsat, ΔLST, seuil ICU, modèles, SHAP).
+- [`05_preuve_split_spatial.ipynb`](05_preuve_split_spatial.ipynb) —
+  vérifie le split train/val/test (audit scientifique point 1) : aucune
+  fuite de duplication, mais aucune marge tampon entre ensembles non plus
+  (limite documentée, avec chiffrage du coût d'une correction).
+- [`06_analyse_des_erreurs.ipynb`](06_analyse_des_erreurs.ipynb) — où et
+  pourquoi le modèle se trompe le plus (résidus, tissu, cas extrêmes).
+- [`extension/01_comprendre_les_donnees_ICU.ipynb`](extension/01_comprendre_les_donnees_ICU.ipynb)
+  et [`extension/02_comprendre_le_modele_UNet.ipynb`](extension/02_comprendre_le_modele_UNet.ipynb)
+  — notebooks pédagogiques de l'extension U-Net écartée (voir plus bas).
+
 ## Périmètre & feuilles de route
 
 - Roadmap active (v2 recentrée) :
