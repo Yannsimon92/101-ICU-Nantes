@@ -6,15 +6,17 @@ réelles puis à valider.*
 
 ## 1. Données — blocages utilisateur
 
-### 1.1 Authentification Google Earth Engine 🔴 bloquant
+### 1.1 Authentification Google Earth Engine ✅ fait (2026-07-16)
 ```bash
-.venv/icu/Scripts/python.exe -m earthengine authenticate
-# Ouvre https://code.earthengine.google.com/ — autorise, colle le token.
-# Il faut aussi un projet Google Cloud avec l'API Earth Engine activée
-# (le `--project <id>` à passer aux commandes ci-dessous).
+# Une fois le venv active (le paquet earthengine-api installe un script CLI
+# "earthengine", pas un module -m earthengine) :
+earthengine authenticate --auth_mode=notebook
+# Le mode par defaut (gcloud) a ete bloque par Google ("Cette application est
+# bloquee") sur le compte perso -> --auth_mode=notebook route via le client
+# OAuth dedie Earth Engine et fonctionne (code d'autorisation colle a la main).
 ```
-Sans ça, **aucune donnée réelle** ne peut être extraite — tout le reste de la
-section 1 et 2 est suspendu.
+Reste a verifier/obtenir : un projet Google Cloud avec l'API Earth Engine
+activee (le `--project <id>` a passer aux commandes ci-dessous).
 
 ### 1.2 Valider les emprises Lambert-93 🟠
 Les coordonnées des `ZONES` dans `gee_extraction.py` sont **approximatives**
@@ -136,8 +138,8 @@ Reprises de `extension/icu_roadmap_v2.md` §« Décisions à prendre » :
 ## 5. Récap commandes (raccourci)
 
 ```bash
-# une fois pour toutes
-.venv/icu/Scripts/python.exe -m earthengine authenticate
+# une fois pour toutes (venv active)
+earthengine authenticate
 
 # J1 — données + cartes
 .venv/icu/Scripts/python.exe gee_extraction.py --zone nantes_metropole --resolution 100 --with-ndbi --project <projet>

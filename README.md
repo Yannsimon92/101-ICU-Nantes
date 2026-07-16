@@ -193,6 +193,12 @@ classification de tissu, table end-to-end, run complet
 - Acquisitions **matinales d'été par ciel clair** (~10 h 50 UTC) : SUHI
   diurne, **différent de l'ICU nocturne** visé par les politiques de fraîcheur.
 - Résolution 100 m = échelle du **quartier**, pas de la rue.
+- **Couverture Landsat inégale selon les dates** (tuilage WRS-2 : la bbox
+  métropole chevauche deux traces adjacentes) : sur `nantes_metropole`, ~11
+  des 20 dates couvrent l'emprise entière, les ~9 autres n'en couvrent qu'une
+  tranche (une seule des deux scènes du jour a passé le filtre nuages). La
+  fréquence ICU est donc plus robuste au centre-ouest qu'en périphérie
+  (est, vers Carquefou/Orvault), où moins de dates contribuent par pixel.
 - Validation **in situ** non réalisée (cf. audit scientifique) ; le projet est
   exploratoire et pédagogique, à valider terrain avant communication opérationnelle.
 
