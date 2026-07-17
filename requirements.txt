@@ -16,9 +16,9 @@ shap>=0.44
 statsmodels>=0.14
 
 # Visualisation
-streamlit>=1.30
-streamlit-folium>=0.15
-folium>=0.15
+# NB : pas de wheel stable pour Python 3.14 au moment de l'écriture -> pré-version
+# (installer avec `pip install --pre keplergl` ou `pip install -r requirements.txt --pre`)
+keplergl==0.4.0rc4
 matplotlib
 
 # Notebooks

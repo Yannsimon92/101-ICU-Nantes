@@ -147,14 +147,18 @@ gee_extraction.py ──> Google Drive ──> data/raw/                  (LST 1
        --points data/open_data/points_fraicheur.geojson
    ```
 
-5. **Visualisation** (`app.py`) — carte folium (fond CartoDB Positron) avec
-   couches LST / ΔLST / fréquence ICU, points de fraîcheur superposés, panneau
-   SHAP, et **encadré de mise en garde** (température de surface ≠ air,
+5. **Visualisation** (`app.py`) — génère une carte **kepler.gl** statique (HTML
+   autonome, sans serveur) : grille de polygones 100 m avec extrusion 3D sur la
+   fréquence ICU, couche temporelle ΔLST optionnelle (`--with-timeseries`),
+   points de fraîcheur superposés. Produit `data/web/index.html` — page
+   enveloppante avec la carte (iframe), les tuiles de métriques, le panneau
+   SHAP et l'**encadré de mise en garde** (température de surface ≠ air,
    SUHI diurne ≠ UHI nocturne, résolution 100 m = quartier pas rue).
    Fonctionne aussi sans données (mode démo) :
 
    ```bash
-   streamlit run app.py
+   python app.py
+   # puis ouvrir data/web/index.html dans un navigateur
    ```
 
 ## Tests
@@ -165,7 +169,8 @@ pytest tests/ -v
 
 12 tests : split sans fuite (zéro bloc partagé), calcul d'anomalie,
 classification de tissu, table end-to-end, run complet
-`compute_icu → build_table → model_evaluation`, smoke test de l'app Streamlit.
+`compute_icu → build_table → model_evaluation`, smoke test de la génération de
+la carte kepler.gl (`app.py`).
 
 ## Environnement Python
 
@@ -185,7 +190,7 @@ classification de tissu, table end-to-end, run complet
 - **scikit-learn** — régression linéaire + split spatial `GroupShuffleSplit`
 - **LightGBM** — gradient boosting
 - **SHAP** — interprétation (TreeExplainer)
-- **streamlit + folium** — visualisation interactive
+- **kepler.gl** — visualisation interactive (carte polygonale 3D)
 
 ## Limites assumées (argument d'entretien, pas faiblesse)
 
